@@ -10,7 +10,10 @@ BASE_URL = "https://api.sensorpush.com/api/v1"
 
 # Replace with your SensorPush credentials
 EMAIL = "tempsensor78@gmail.com"
-PASSWORD = "perplexed shaping snowdrop swizzle"
+PASSWORD = os.getenv("SENSORPUSH_PASSWORD")  # Load password from environment variable
+
+if PASSWORD is None:
+    raise ValueError("Environment variable SENSORPUSH_PASSWORD is not set!")
 
 def authorize(email, password):
     url = os.path.join(BASE_URL, "oauth/authorize")
