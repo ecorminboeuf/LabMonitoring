@@ -126,6 +126,7 @@ def append_new_samples(samples, sensor_id, log_file):
                 # Prepare the full record
                 record = {
                     "sensor_id": float(sensor_id),
+                    "tiimestamp": data["observed"],
                     "temperature C": float(round(fahrenheit_to_celsius(data['temperature']), 1)),
                     "dewpoint C": float(round(fahrenheit_to_celsius(data["dewpoint"]), 1)),
                     "humidity": float(data["humidity"]),
