@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import os
+import csv
 from datetime import datetime, timedelta
 
 # ========== CONFIGURATION ==========
@@ -13,7 +14,7 @@ if PASSWORD is None:
 
 BASE_URL = "https://api.sensorpush.com/api/v1"
 
-LOG_FILE = "./sensor_data.log"
+LOG_FILE_PREFIX = "./sensor_data_"
 QUERY_INTERVAL_MIN = 5        # How often to query samples (in minutes)
 REAUTH_INTERVAL_MIN = 60      # Reauthorize every 60 minutes
 DUPLICATE_CHECK_ROWS = 50     # Check last m rows in log file for duplicates
@@ -93,21 +94,57 @@ def get_last_logged_ids(n_rows):
     return ids
 """
 
-def append_new_samples(samples):
-    if not samples.get("sensors"):
-        return 0
-    new_count = 0
-    with open(LOG_FILE, "a") as f:
-        for sensor_id, data_list in samples["sensors"].items():
-            for data in data_list:
-                data_with_id = data.copy()
-                data_with_id["sensor_id"] = sensor_id
-                f.write(json.dumps(data_with_id) + "\n")
-                new_count += 1
-    return new_count
+# def append_new_samples(samples):
+#     if not samples.get("sensors"):
+#         return 0
+#     new_count = 0
+#     with open(LOG_FILE, "a") as f:
+#         for sensor_id, data_list in samples["sensors"].items():
+#             for data in data_list:
+#                 data_with_id = data.copy()
+#                 data_with_id["sensor_id"] = sensor_id
+#                 f.write(json.dumps(data_with_id) + "\n")
+#                 new_count += 1
+#     return new_count
 
 def fahrenheit_to_celsius(temp_f):
     temp_c = (temp_f - 32)*5/9
+    return temp_c
+
+def append_new_samples(samples, sensor_id, log_file):
+    if not samples.get("sensors"):
+        return 0
+
+    file_exists = os.path.isfile(log_file)
+    new_count = 0
+
+    with open(log_file, "a", newline="") as f:
+        writer = None
+
+        for sensor_id, data_list in samples["sensors"].items():
+            for data in data_list:
+                # Prepare the full record
+                record = {
+                    "sensor_id": float(sensor_id),
+                    "temperature C": float(round(fahrenheit_to_celsius(data['temperature']), 1)),
+                    "dewpoint C": float(round(fahrenheit_to_celsius(data["dewpoint"]), 1)),
+                    "humidity": float(data["humidity"]),
+                    "vpd": float(data["vpd"]),
+                }
+
+                # Initialize CSV writer with headers if the file is new
+                if writer is None:
+                    writer = csv.DictWriter(f, fieldnames=record.keys())
+                    if not file_exists:
+                        writer.writeheader()
+
+                writer.writerow(record)
+                new_count += 1
+
+    return new_count
+
+
+
 
 
 if __name__ == "__main__":
@@ -143,14 +180,17 @@ if __name__ == "__main__":
             start_time = time_ret.strftime("%Y-%m-%dT%H:%M:%S%z")
             stop_time = datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z")
 
-            samples = query_samples_advanced(
-                access_token,
-                sensors=sensor_ids,
-                start_time=start_time,
-                stop_time=stop_time
-                    )
-            added = append_new_samples(samples)# , existing_ids)
-            print(f"[{datetime.now()}] [+] Retrieved {added} new samples")
+            for sensor_id in sensor_ids:
+                sensor_name = sensors[sensor_id]['name']
+                log_file = LOG_FILE_PREFIX+sensor_name+'.csv'
+                samples = query_samples_advanced(
+                    access_token,
+                    sensors=sensor_ids,
+                    start_time=start_time,
+                    stop_time=stop_time
+                        )
+                added = append_new_samples(samples, sensor_id, log_file)# , existing_ids)
+                print(f"[{datetime.now()}] [+] Retrieved {added} new samples for sensor in {sensor_name}")
         except Exception as e:
             print(f"[!] Failed to query samples: {e}")
 
