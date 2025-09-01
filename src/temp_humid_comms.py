@@ -63,7 +63,7 @@ def list_sensors(access_token):
     response.raise_for_status()
     return response.json()
 
-def query_samples_advanced(access_token, sensors, start_time, stop_time, limit=10000):
+def query_samples_advanced(access_token, sensors, start_time, stop_time, limit=50):
     url = os.path.join(BASE_URL, "samples")
     headers = {"accept": "application/json", "Authorization": access_token}
     payload = {
@@ -111,7 +111,7 @@ def fahrenheit_to_celsius(temp_f):
     temp_c = (temp_f - 32)*5/9
     return temp_c
 
-def append_new_samples(samples, sensor_id, log_file):
+def append_new_samples(samples, log_file):
     if not samples.get("sensors"):
         return 0
 
@@ -121,11 +121,11 @@ def append_new_samples(samples, sensor_id, log_file):
     with open(log_file, "a", newline="") as f:
         writer = None
 
-        for sensor_id, data_list in samples["sensors"].items():
+        for sid, data_list in samples["sensors"].items():
             for data in data_list:
                 # Prepare the full record
                 record = {
-                    "sensor_id": float(sensor_id),
+                    "sensor_id": float(sid),
                     "tiimestamp": data["observed"],
                     "temperature C": float(round(fahrenheit_to_celsius(data['temperature']), 1)),
                     "dewpoint C": float(round(fahrenheit_to_celsius(data["dewpoint"]), 1)),
@@ -186,11 +186,11 @@ if __name__ == "__main__":
                 log_file = LOG_FILE_PREFIX+sensor_name+'.csv'
                 samples = query_samples_advanced(
                     access_token,
-                    sensors=sensor_ids,
+                    sensors=[sensor_id],
                     start_time=start_time,
                     stop_time=stop_time
                         )
-                added = append_new_samples(samples, sensor_id, log_file)# , existing_ids)
+                added = append_new_samples(samples, log_file)# , existing_ids)
                 print(f"[{datetime.now()}] [+] Retrieved {added} new samples for sensor in {sensor_name}")
         except Exception as e:
             print(f"[!] Failed to query samples: {e}")
