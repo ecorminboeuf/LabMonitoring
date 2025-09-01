@@ -1,4 +1,4 @@
-sensor_id,tiimestamp,temperature C,dewpoint C,humidity,vpd
+sensor_id,timestamp,temperature C,dewpoint C,humidity,vpd
 456982.65409113263,2025-08-31T18:06:09.000Z,22.8,13.6,55.95,1.22
 456982.65409113263,2025-08-31T18:06:05.000Z,22.8,13.6,55.98,1.22
 456982.65409113263,2025-08-31T18:05:43.000Z,22.8,13.6,55.95,1.22
